@@ -1,0 +1,51 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_cortex_chat/message
+
+    A single chat message (user or assistant).
+
+    Context variables required for this template:
+    * isuser - Whether this is the student's message.
+    * rolelabel - Localised speaker label.
+    * message - The message text (plain; rendered as escaped text).
+    * hassources - Whether a sources list follows.
+    * sources - Array of {index, reference}.
+
+    Example context (json):
+    {
+        "isuser": false,
+        "rolelabel": "Course assistant",
+        "message": "The mitochondria is the powerhouse of the cell [1].",
+        "hassources": true,
+        "sources": [{"index": 1, "reference": "Topic 2 / Cell biology"}]
+    }
+}}
+<div class="block-cortex-chat-message {{#isuser}}block-cortex-chat-message-user{{/isuser}}{{^isuser}}block-cortex-chat-message-assistant{{/isuser}}">
+    <div class="block-cortex-chat-role small font-weight-bold fw-bold">{{rolelabel}}</div>
+    <div class="block-cortex-chat-text">{{message}}</div>
+    {{#hassources}}
+    <div class="block-cortex-chat-sources mt-1">
+        <div class="small font-weight-bold fw-bold">{{#str}}sourcesheading, block_cortex_chat{{/str}}</div>
+        <ol class="block-cortex-chat-sources-list small pl-3 ps-3 mb-0">
+            {{#sources}}
+            <li>{{reference}}</li>
+            {{/sources}}
+        </ol>
+    </div>
+    {{/hassources}}
+</div>

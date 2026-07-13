@@ -1,0 +1,43 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_cortex_chat/unavailable
+
+    Shown when the chat cannot operate.
+
+    Context variables required for this template:
+    * message - Localised, non-sensitive unavailable message.
+    * isstaff - Whether to show the staff detail.
+    * detail - Staff-only detail string.
+
+    Example context (json):
+    {
+        "message": "This course's knowledge base is not ready yet. Please check back later.",
+        "isstaff": true,
+        "detail": "Course corpus status: processing."
+    }
+}}
+<div class="block-cortex-chat-unavailable">
+    <p class="text-muted mb-1">{{message}}</p>
+    {{#isstaff}}
+        {{#detail}}
+        <div class="alert alert-info small mt-2 mb-0" role="status">
+            <strong>{{#str}}staffdiagnostics, block_cortex_chat{{/str}}:</strong> {{detail}}
+        </div>
+        {{/detail}}
+    {{/isstaff}}
+</div>

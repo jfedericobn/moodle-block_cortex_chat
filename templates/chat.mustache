@@ -1,0 +1,73 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_cortex_chat/chat
+
+    Course-scoped Cortex RAG chat shell.
+
+    Context variables required for this template:
+    * contextid - Course context id.
+    * courseid - Course id.
+    * maxlength - Maximum question length.
+    * isstaff - Whether to show staff diagnostics.
+    * groundingstate - Last grounding state (staff only).
+
+    Example context (json):
+    {
+        "contextid": 42,
+        "courseid": 7,
+        "maxlength": 1000,
+        "isstaff": false,
+        "groundingstate": ""
+    }
+}}
+<div class="block-cortex-chat" data-region="cortex-chat"
+     data-contextid="{{contextid}}" data-courseid="{{courseid}}" data-maxlength="{{maxlength}}">
+    <p class="block-cortex-chat-intro small text-muted">{{#str}}chatintro, block_cortex_chat{{/str}}</p>
+
+    <div class="block-cortex-chat-log" data-region="cortex-chat-log" role="log" aria-live="polite" aria-atomic="false">
+    </div>
+
+    <form class="block-cortex-chat-form" data-region="cortex-chat-form" novalidate>
+        <label class="sr-only visually-hidden" for="cortex-chat-input-{{contextid}}">
+            {{#str}}inputlabel, block_cortex_chat{{/str}}
+        </label>
+        <div class="input-group">
+            <textarea id="cortex-chat-input-{{contextid}}" class="form-control block-cortex-chat-input"
+                      data-region="cortex-chat-input" rows="2" maxlength="{{maxlength}}"
+                      placeholder="{{#str}}inputplaceholder, block_cortex_chat{{/str}}"></textarea>
+            <button type="submit" class="btn btn-primary block-cortex-chat-send" data-action="cortex-chat-send">
+                {{#str}}send, block_cortex_chat{{/str}}
+            </button>
+        </div>
+        <div class="d-flex justify-content-between mt-1">
+            <small class="text-muted block-cortex-chat-disclaimer">{{#str}}disclaimer, block_cortex_chat{{/str}}</small>
+            <small class="text-muted" data-region="cortex-chat-charcount" aria-hidden="true">0/{{maxlength}}</small>
+        </div>
+    </form>
+
+    {{#isstaff}}
+    <details class="block-cortex-chat-diagnostics mt-2">
+        <summary class="small">{{#str}}staffdiagnostics, block_cortex_chat{{/str}}</summary>
+        <div class="small text-muted">
+            <div data-region="cortex-chat-diag-grounding">
+                {{#str}}diag_grounding, block_cortex_chat{{/str}}: <span data-region="cortex-chat-grounding">{{groundingstate}}</span>
+            </div>
+        </div>
+    </details>
+    {{/isstaff}}
+</div>
