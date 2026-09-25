@@ -12,10 +12,16 @@ course's knowledge base held in Cortex. It is the read/query counterpart to
 In scope for the MVP:
 
 - A course-context block rendering an accessible chat widget.
-- A server-side pipeline: Cortex retrieval → Moodle AI generation.
+- A server-side pipeline: (Cortex retrieval + live Moodle schedule) → Moodle AI
+  generation.
+- A live course agent that reads the asking user's visible `assign` and `quiz`
+  activities: their existence, whether they are graded (from the grade item, not
+  a learner's grade), and the user's effective dates (including personal
+  overrides).
 - Fail-closed course scoping (tenant and reference code resolved server-side).
 - Source citations returned with each grounded answer.
-- Guardrails: per-user rate limit, question length, bounded retrieval context.
+- Guardrails: per-user rate limit, question length, bounded retrieval context,
+  bounded live-activity count.
 - Reuse of the Moodle AI subsystem for generation, policy, and auditing.
 
 Explicitly **out of scope** for the MVP:
@@ -25,6 +31,10 @@ Explicitly **out of scope** for the MVP:
 - Streaming responses.
 - Direct calls to a model provider (all generation goes through `core_ai`).
 - Use of Cortex's OpenAI-compatible `/chat/completions` endpoint.
+- Live data beyond `assign`/`quiz` existence, gradedness, and schedule. In
+  particular: no learner grades, submissions, completion, or other learners'
+  data, and no transmission of live personal data to Cortex. (Gradedness here
+  means the activity's grade-item configuration, not any learner's grade.)
 
 ## Functional requirements
 
@@ -42,9 +52,15 @@ Explicitly **out of scope** for the MVP:
    - resolves `tenant_id` (from `local_cortex`) and `reference_code` (from the
      course row) — never from the browser;
    - calls Cortex `POST /api/v1/service/retrieve`;
-   - **declines** (fixed message, no AI call) unless the grounding state is
-     `strong` or `qualified` **and** at least one proposition is returned;
-   - otherwise composes a bounded prompt and calls Moodle AI `generate_text`;
+   - when `livedataenabled` is on, also collects the asking user's visible
+     `assign`/`quiz` schedule via the live course agent (in-process, read-only,
+     bounded by `maxliveactivities`);
+   - **declines** (fixed message, no AI call) only when Cortex grounding is not
+     `strong`/`qualified`-with-propositions **and** the live agent returned no
+     visible facts; if Cortex was instead unavailable and there is no live data,
+     a retryable error is returned;
+   - otherwise composes a bounded merged prompt (live schedule + course
+     material) and calls Moodle AI `generate_text`;
    - returns the generated answer plus an ordered, de-duplicated list of source
      references.
 5. Answers and questions are rendered as **escaped text**, never raw HTML.
@@ -62,7 +78,10 @@ Explicitly **out of scope** for the MVP:
   characters to avoid provider token overflow.
 - **Privacy:** the block stores no personal data in its own database tables. The
   question is transmitted to Cortex for retrieval; the composed prompt is handled
-  by the Moodle AI subsystem under its retention controls.
+  by the Moodle AI subsystem under its retention controls. The live agent reads
+  only the asking user's own effective schedule for activities they can already
+  see; it never reads other learners' data and never sends live personal dates
+  to Cortex.
 
 ## Behavioural contract (AJAX `block_cortex_chat_send_message`)
 

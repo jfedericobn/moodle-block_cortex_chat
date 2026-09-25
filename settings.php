@@ -80,6 +80,24 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
+    // Whether the live Moodle course agent augments answers with the user's
+    // effective assignment/quiz schedule at chat time.
+    $settings->add(new admin_setting_configcheckbox(
+        'block_cortex_chat/livedataenabled',
+        get_string('settings_livedataenabled', 'block_cortex_chat'),
+        get_string('settings_livedataenabled_desc', 'block_cortex_chat'),
+        '1'
+    ));
+
+    // Maximum number of activities the live agent reports into the prompt.
+    $settings->add(new admin_setting_configtext(
+        'block_cortex_chat/maxliveactivities',
+        get_string('settings_maxliveactivities', 'block_cortex_chat'),
+        get_string('settings_maxliveactivities_desc', 'block_cortex_chat'),
+        '30',
+        PARAM_INT
+    ));
+
     // The fixed message shown when Cortex declines / returns no course material.
     $settings->add(new admin_setting_configtextarea(
         'block_cortex_chat/declinemessage',

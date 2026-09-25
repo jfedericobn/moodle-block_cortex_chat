@@ -27,6 +27,12 @@ use core_privacy\local\metadata\collection;
  * under its own retention controls. A short-lived rate-limit counter is kept in
  * the cache only.
  *
+ * The prompt may also include the asking user's own effective activity schedule
+ * (assignment/quiz dates and their personal overrides), read live from Moodle
+ * for activities the user can already see. This live schedule is used only to
+ * compose the local Moodle AI prompt; it is never transmitted to Cortex and is
+ * not stored by this plugin.
+ *
  * @package    block_cortex_chat
  * @copyright  2026 Cortex integration
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

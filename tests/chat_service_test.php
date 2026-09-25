@@ -100,7 +100,8 @@ final class chat_service_test extends \advanced_testcase {
 
         // Question and grounding instruction present.
         $this->assertStringContainsString('What is the answer?', $prompt);
-        $this->assertStringContainsString('ONLY the course material', $prompt);
+        $this->assertStringContainsString('ONLY the information provided', $prompt);
+        $this->assertStringContainsString('COURSE MATERIAL:', $prompt);
 
         // Sources are unique and ordered.
         $this->assertCount(2, $sources);
@@ -204,5 +205,71 @@ final class chat_service_test extends \advanced_testcase {
         $result = chat_service::ask($course->id, $context, 0, 'Hello?');
         $this->assertSame(chat_service::STATUS_UNAVAILABLE, $result['status']);
         $this->assertSame('', $result['answer']);
+    }
+
+    /**
+     * Live propositions render as their own section, are numbered before course
+     * material, and their references appear in the merged source list.
+     */
+    public function test_build_prompt_merges_live_schedule(): void {
+        $this->resetAfterTest();
+        set_config('maxpropositions', 8, 'block_cortex_chat');
+        set_config('maxcontextchars', 100000, 'block_cortex_chat');
+
+        $cortexprops = [
+            ['proposition' => 'Culture has layers.', 'source_reference' => 'Topic 1'],
+        ];
+        $liveprops = [
+            [
+                'proposition' => 'Assignment "Essay 1" - Due: Monday.',
+                'source_reference' => 'Moodle live: Assignment "Essay 1"',
+                'origin' => 'live',
+            ],
+        ];
+
+        $method = new \ReflectionMethod(chat_service::class, 'build_prompt');
+        $method->setAccessible(true);
+        [$prompt, $sources] = $method->invoke(null, 'When is the essay due?', $cortexprops, $liveprops);
+
+        // Both labelled sections are present.
+        $this->assertStringContainsString('LIVE COURSE SCHEDULE:', $prompt);
+        $this->assertStringContainsString('COURSE MATERIAL:', $prompt);
+
+        // Live schedule is numbered first, course material second (continuous).
+        $livepos = strpos($prompt, 'LIVE COURSE SCHEDULE:');
+        $materialpos = strpos($prompt, 'COURSE MATERIAL:');
+        $this->assertLessThan($materialpos, $livepos);
+        $this->assertStringContainsString('[1] Assignment "Essay 1"', $prompt);
+        $this->assertStringContainsString('[2] Culture has layers.', $prompt);
+
+        // Both references are in the merged, ordered source list.
+        $this->assertCount(2, $sources);
+        $this->assertSame('Moodle live: Assignment "Essay 1"', $sources[0]['reference']);
+        $this->assertSame('Topic 1', $sources[1]['reference']);
+    }
+
+    /**
+     * With no course material and only live schedule, the prompt still renders
+     * the live section and omits the empty course-material section.
+     */
+    public function test_build_prompt_live_only_omits_material_section(): void {
+        $this->resetAfterTest();
+
+        $liveprops = [
+            [
+                'proposition' => 'Quiz "Midterm" - Closes: Friday.',
+                'source_reference' => 'Moodle live: Quiz "Midterm"',
+                'origin' => 'live',
+            ],
+        ];
+
+        $method = new \ReflectionMethod(chat_service::class, 'build_prompt');
+        $method->setAccessible(true);
+        [$prompt, $sources] = $method->invoke(null, 'When does the quiz close?', [], $liveprops);
+
+        $this->assertStringContainsString('LIVE COURSE SCHEDULE:', $prompt);
+        $this->assertStringNotContainsString('COURSE MATERIAL:', $prompt);
+        $this->assertStringContainsString('[1] Quiz "Midterm"', $prompt);
+        $this->assertCount(1, $sources);
     }
 }

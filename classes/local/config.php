@@ -44,6 +44,9 @@ class config {
     /** @var int Default rolling rate-limit window (seconds). */
     const DEFAULT_RATE_WINDOW = 3600;
 
+    /** @var int Default maximum number of activities the live agent reports. */
+    const DEFAULT_MAX_LIVE_ACTIVITIES = 30;
+
     /**
      * Cortex Service Plane base URL (no trailing slash).
      *
@@ -110,6 +113,34 @@ class config {
     public static function rate_window(): int {
         $value = (int)get_config('block_cortex_chat', 'ratewindow');
         return $value > 0 ? $value : self::DEFAULT_RATE_WINDOW;
+    }
+
+    /**
+     * Whether the live Moodle course agent is enabled.
+     *
+     * When enabled, the chat merges the asking user's effective activity
+     * schedule (assignment/quiz dates) with Cortex retrieval before generation.
+     * Defaults to enabled; a site can turn it off to restore RAG-only behaviour.
+     *
+     * @return bool
+     */
+    public static function live_data_enabled(): bool {
+        $value = get_config('block_cortex_chat', 'livedataenabled');
+        // Treat an unset setting as enabled (default on).
+        if ($value === false || $value === null || $value === '') {
+            return true;
+        }
+        return (bool)(int)$value;
+    }
+
+    /**
+     * Maximum number of activities the live agent reports into the prompt.
+     *
+     * @return int
+     */
+    public static function max_live_activities(): int {
+        $value = (int)get_config('block_cortex_chat', 'maxliveactivities');
+        return $value > 0 ? $value : self::DEFAULT_MAX_LIVE_ACTIVITIES;
     }
 
     /**

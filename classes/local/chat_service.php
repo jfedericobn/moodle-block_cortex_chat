@@ -21,14 +21,23 @@ use core_ai\manager;
 use local_cortex\local\course_state;
 
 /**
- * Orchestrates the course-scoped RAG pipeline:
- * Cortex retrieval -> bounded prompt -> Moodle AI generation.
+ * Orchestrates the course-scoped chat pipeline:
+ * (Cortex retrieval + live Moodle schedule) -> bounded prompt -> Moodle AI.
  *
  * The server derives the tenant id and reference code from the course's ready
  * local_cortex row. The browser never supplies either value, so it cannot
- * query another course's corpus. The policy is fail-closed: a declined or empty
- * Cortex grounding returns a course-material-only message and never reaches the
- * AI provider.
+ * query another course's corpus.
+ *
+ * Two evidence sources are merged before generation:
+ *  - Cortex retrieval, for conceptual course content;
+ *  - {@see live_course_agent}, for the asking user's authoritative activity
+ *    schedule (assignment/quiz dates and their personal overrides).
+ *
+ * The policy remains fail-closed: generation proceeds only if Cortex returns
+ * usable grounding OR the live agent returns at least one visible fact. If
+ * neither source has evidence, a fixed decline is returned and the AI provider
+ * is never called. Live personal dates stay in the Moodle AI prompt and are
+ * never written to the Cortex corpus.
  *
  * @package    block_cortex_chat
  * @copyright  2026 Cortex integration
@@ -117,29 +126,47 @@ class chat_service {
         $state = course_state::get($courseid);
         $referencecode = (string)$state->referencecode;
 
-        // Stage 1: retrieve grounded context from Cortex.
+        // Stage 1: retrieve grounded context from Cortex. A Cortex transport
+        // error or non-200 does not hard-fail the request on its own: if the
+        // live agent later has usable facts we can still answer the student.
+        $groundingstate = 'declined';
+        $propositions = [];
+        $cortexunavailable = false;
         try {
             $response = service_client::instance()->retrieve($referencecode, $message);
+            if ((int)$response['httpcode'] === 200) {
+                $body = $response['body'];
+                $groundingstate = (string)($body['grounding_state'] ?? 'declined');
+                $propositions = is_array($body['propositions'] ?? null) ? $body['propositions'] : [];
+            } else {
+                $cortexunavailable = true;
+            }
         } catch (\Throwable $e) {
-            return self::result(self::STATUS_ERROR, '', [], '', 'serviceunavailable');
+            $cortexunavailable = true;
         }
 
-        if ((int)$response['httpcode'] !== 200) {
-            return self::result(self::STATUS_ERROR, '', [], '', 'serviceunavailable');
-        }
+        // Stage 1b: gather live course facts (assignment/quiz schedule) for this
+        // user, in-process. Never lets a live-data failure break the pipeline.
+        $liveprops = live_course_agent::collect($courseid, $userid);
 
-        $body = $response['body'];
-        $groundingstate = (string)($body['grounding_state'] ?? 'declined');
-        $propositions = is_array($body['propositions'] ?? null) ? $body['propositions'] : [];
-
-        // Stage 1 gate (fail closed): only strong/qualified grounding with
-        // propositions proceeds to AI generation.
-        if (self::should_decline($groundingstate, $propositions)) {
+        // Multi-source gate (still fail closed): proceed if Cortex has usable
+        // grounding OR the live agent returned at least one visible fact.
+        $cortexdeclined = self::should_decline($groundingstate, $propositions);
+        if ($cortexdeclined && empty($liveprops)) {
+            // With no live evidence, surface a retryable error when Cortex was
+            // unavailable, otherwise the normal course-material-only decline.
+            if ($cortexunavailable) {
+                return self::result(self::STATUS_ERROR, '', [], '', 'serviceunavailable');
+            }
             return self::result(self::STATUS_DECLINED, config::decline_message(), [], $groundingstate, '');
         }
 
-        // Bound the context passed downstream.
-        [$prompt, $sources] = self::build_prompt($message, $propositions);
+        // If Cortex grounding was weak, do not pass its (rejected) propositions
+        // to the model; answer from the live schedule alone.
+        $cortexforprompt = $cortexdeclined ? [] : $propositions;
+
+        // Bound the context passed downstream, merging both evidence sources.
+        [$prompt, $sources] = self::build_prompt($message, $cortexforprompt, $liveprops);
 
         // Stage 2: format an answer with Moodle AI, grounded only in the context.
         try {
@@ -167,16 +194,17 @@ class chat_service {
     }
 
     /**
-     * The fail-closed retrieval gate.
+     * The Cortex-side grounding gate.
      *
-     * Only "strong" or "qualified" grounding with at least one proposition is
-     * allowed through to AI generation. Everything else (including "declined"
-     * and empty results) is refused so the assistant never answers without
-     * grounded course material.
+     * Only "strong" or "qualified" grounding with at least one proposition
+     * counts as usable course-content evidence. Everything else (including
+     * "declined" and empty results) is treated as no Cortex evidence. The
+     * overall decision to answer is made in {@see ask()}, which also considers
+     * live evidence before falling back to the fixed decline.
      *
      * @param string $groundingstate Cortex grounding state.
      * @param array $propositions Retrieved propositions.
-     * @return bool True if the request must be declined.
+     * @return bool True if Cortex provided no usable grounded evidence.
      */
     public static function should_decline(string $groundingstate, array $propositions): bool {
         if (!in_array($groundingstate, ['strong', 'qualified'], true)) {
@@ -188,22 +216,54 @@ class chat_service {
     /**
      * Compose a bounded, grounded prompt and the ordered source list.
      *
+     * Two evidence sources are merged into one numbered context so citations
+     * ([1], [2], ...) map to the returned source list regardless of origin:
+     *  - the LIVE COURSE SCHEDULE (authoritative per-user dates from Moodle),
+     *    rendered first so it is protected by the character budget;
+     *  - the COURSE MATERIAL (Cortex-retrieved course content), bounded by the
+     *    proposition count.
+     *
      * @param string $message The user question.
-     * @param array $propositions Cortex propositions (each an assoc array).
+     * @param array $cortexprops Cortex propositions (each an assoc array).
+     * @param array $liveprops Live Moodle propositions (each an assoc array).
      * @return array{0:string,1:array} [prompt, sources]
      */
-    private static function build_prompt(string $message, array $propositions): array {
+    private static function build_prompt(string $message, array $cortexprops, array $liveprops = []): array {
         $maxprops = config::max_propositions();
         $maxchars = config::max_context_chars();
 
-        $lines = [];
         $sources = [];
         $sourceindex = [];
         $used = 0;
-        $index = 0;
+        $number = 0;
 
-        foreach ($propositions as $prop) {
-            if ($index >= $maxprops) {
+        // Live schedule first: authoritative and small, so it is prioritised in
+        // the shared character budget. Bounded by its own activity cap already.
+        $livelines = [];
+        foreach ($liveprops as $prop) {
+            $text = trim((string)($prop['proposition'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            $reference = trim((string)($prop['source_reference'] ?? ''));
+            $entry = '[' . ($number + 1) . '] ' . $text;
+            if ($reference !== '') {
+                $entry .= ' (source: ' . $reference . ')';
+            }
+            if ($used + \core_text::strlen($entry) > $maxchars && !empty($livelines)) {
+                break;
+            }
+            $used += \core_text::strlen($entry);
+            $number++;
+            $livelines[] = $entry;
+            self::track_source($sources, $sourceindex, $reference);
+        }
+
+        // Course material next, bounded by the proposition count.
+        $materiallines = [];
+        $materialcount = 0;
+        foreach ($cortexprops as $prop) {
+            if ($materialcount >= $maxprops) {
                 break;
             }
             $text = trim((string)($prop['proposition'] ?? ''));
@@ -211,45 +271,62 @@ class chat_service {
                 continue;
             }
             $reference = trim((string)($prop['source_reference'] ?? ''));
-
-            $entry = '[' . ($index + 1) . '] ' . $text;
+            $entry = '[' . ($number + 1) . '] ' . $text;
             if ($reference !== '') {
                 $entry .= ' (source: ' . $reference . ')';
             }
-
-            // Enforce the total context character budget.
-            if ($used + \core_text::strlen($entry) > $maxchars && !empty($lines)) {
+            if ($used + \core_text::strlen($entry) > $maxchars && (!empty($materiallines) || !empty($livelines))) {
                 break;
             }
             $used += \core_text::strlen($entry);
-            $lines[] = $entry;
-
-            // Track unique, ordered sources for citation output.
-            if ($reference !== '' && !isset($sourceindex[$reference])) {
-                $sourceindex[$reference] = true;
-                $sources[] = [
-                    'index' => count($sources) + 1,
-                    'reference' => $reference,
-                ];
-            }
-            $index++;
+            $number++;
+            $materiallines[] = $entry;
+            $materialcount++;
+            self::track_source($sources, $sourceindex, $reference);
         }
 
-        $context = implode("\n", $lines);
-
         $prompt = "You are a teaching assistant for a specific Moodle course. "
-            . "Answer the student's question using ONLY the course material provided below. "
-            . "Do not use any outside or general knowledge. "
-            . "If the provided material does not contain the answer, reply that the course "
-            . "material does not cover it and suggest the student rephrase or ask their teacher. "
-            . "Be concise, cite the numbered sources you used in square brackets like [1], and "
-            . "never invent sources or facts.\n\n"
-            . "COURSE MATERIAL:\n"
-            . $context . "\n\n"
-            . "STUDENT QUESTION:\n"
-            . $message;
+            . "Answer the student's question using ONLY the information provided below. "
+            . "Do not use any outside or general knowledge.\n"
+            . "- LIVE COURSE SCHEDULE contains this student's authoritative, up-to-date "
+            . "dates (assignment and quiz open/due/close times), including any personal "
+            . "extensions or overrides. Prefer it for any question about dates, deadlines, "
+            . "or scheduling, even if the course material says otherwise.\n"
+            . "- COURSE MATERIAL contains excerpts from the course content. Use it for "
+            . "conceptual questions.\n"
+            . "If neither section contains the answer, reply that the course material does "
+            . "not cover it and suggest the student rephrase or ask their teacher. "
+            . "Be concise, cite the numbered sources you used using their bracketed numbers, "
+            . "and never invent sources or facts.\n";
+
+        if (!empty($livelines)) {
+            $prompt .= "\nLIVE COURSE SCHEDULE:\n" . implode("\n", $livelines) . "\n";
+        }
+        if (!empty($materiallines)) {
+            $prompt .= "\nCOURSE MATERIAL:\n" . implode("\n", $materiallines) . "\n";
+        }
+
+        $prompt .= "\nSTUDENT QUESTION:\n" . $message;
 
         return [$prompt, $sources];
+    }
+
+    /**
+     * Append a reference to the ordered, de-duplicated source list.
+     *
+     * @param array $sources Source list (modified in place).
+     * @param array $sourceindex Seen-reference index (modified in place).
+     * @param string $reference The source reference to record.
+     */
+    private static function track_source(array &$sources, array &$sourceindex, string $reference): void {
+        if ($reference === '' || isset($sourceindex[$reference])) {
+            return;
+        }
+        $sourceindex[$reference] = true;
+        $sources[] = [
+            'index' => count($sources) + 1,
+            'reference' => $reference,
+        ];
     }
 
     /**
