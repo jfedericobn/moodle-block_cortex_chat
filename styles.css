@@ -39,6 +39,10 @@
     margin-top: 0.25rem;
 }
 
+.block-cortex-chat.block-cortex-chat-hide-sources .block-cortex-chat-sources {
+    display: none;
+}
+
 .block-cortex-chat .block-cortex-chat-pending .block-cortex-chat-text::after {
     content: "";
     display: inline-block;

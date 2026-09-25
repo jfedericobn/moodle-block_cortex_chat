@@ -35,7 +35,11 @@ const SELECTORS = {
     SEND: '[data-action="cortex-chat-send"]',
     CHARCOUNT: '[data-region="cortex-chat-charcount"]',
     GROUNDING: '[data-region="cortex-chat-grounding"]',
+    SOURCESTOGGLE: '[data-region="cortex-chat-sources-toggle"]',
 };
+
+/** localStorage key for the user's "show sources" preference (per browser). */
+const SHOW_SOURCES_STORAGE_KEY = 'block_cortex_chat_showsources';
 
 /**
  * Controller for a single chat block instance.
@@ -57,9 +61,54 @@ class CortexChat {
         this.send = root.querySelector(SELECTORS.SEND);
         this.charcount = root.querySelector(SELECTORS.CHARCOUNT);
         this.grounding = root.querySelector(SELECTORS.GROUNDING);
+        this.sourcestoggle = root.querySelector(SELECTORS.SOURCESTOGGLE);
 
         this.registerListeners();
         this.updateCharCount();
+        this.initSourcesToggle();
+    }
+
+    /**
+     * Restore the "show sources" preference from localStorage and apply it.
+     *
+     * This is a per-browser display preference only (no server round-trip and
+     * no data sent anywhere); it only shows/hides the sources list already
+     * present in each rendered answer to keep responses shorter to read.
+     */
+    initSourcesToggle() {
+        if (!this.sourcestoggle) {
+            return;
+        }
+        let show = true;
+        try {
+            const stored = window.localStorage.getItem(SHOW_SOURCES_STORAGE_KEY);
+            show = stored === null ? true : stored === '1';
+        } catch (error) {
+            // localStorage unavailable (e.g. private browsing); keep the default.
+            show = true;
+        }
+        this.sourcestoggle.checked = show;
+        this.applySourcesVisibility(show);
+
+        this.sourcestoggle.addEventListener('change', () => {
+            const checked = this.sourcestoggle.checked;
+            this.applySourcesVisibility(checked);
+            try {
+                window.localStorage.setItem(SHOW_SOURCES_STORAGE_KEY, checked ? '1' : '0');
+            } catch (error) {
+                // Ignore storage failures; the toggle still works for this page view.
+                window.console.error(error);
+            }
+        });
+    }
+
+    /**
+     * Show or hide the sources list under each rendered answer.
+     *
+     * @param {Boolean} show
+     */
+    applySourcesVisibility(show) {
+        this.root.classList.toggle('block-cortex-chat-hide-sources', !show);
     }
 
     /**

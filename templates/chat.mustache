@@ -39,6 +39,14 @@
      data-contextid="{{contextid}}" data-courseid="{{courseid}}" data-maxlength="{{maxlength}}">
     <p class="block-cortex-chat-intro small text-muted">{{#str}}chatintro, block_cortex_chat{{/str}}</p>
 
+    <div class="form-check block-cortex-chat-sources-toggle-wrap mb-1">
+        <input type="checkbox" class="form-check-input" id="cortex-chat-sources-toggle-{{contextid}}"
+               data-region="cortex-chat-sources-toggle" checked>
+        <label class="form-check-label small text-muted" for="cortex-chat-sources-toggle-{{contextid}}">
+            {{#str}}showsources, block_cortex_chat{{/str}}
+        </label>
+    </div>
+
     <div class="block-cortex-chat-log" data-region="cortex-chat-log" role="log" aria-live="polite" aria-atomic="false">
     </div>
 

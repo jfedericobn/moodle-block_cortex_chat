@@ -45,6 +45,7 @@ $string['sending'] = 'Thinking…';
 $string['youlabel'] = 'You';
 $string['assistantlabel'] = 'Course assistant';
 $string['sourcesheading'] = 'Sources';
+$string['showsources'] = 'Show sources with each answer';
 $string['disclaimer'] = 'AI-generated from course material. Verify important information.';
 $string['clearchat'] = 'Clear conversation';
 $string['charcount'] = '{$a->count}/{$a->max}';
