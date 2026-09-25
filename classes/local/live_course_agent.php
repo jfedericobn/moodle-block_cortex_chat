@@ -175,9 +175,18 @@ class live_course_agent {
      * @return string
      */
     private static function summary_text(\cm_info $cm, string $typename, string $name): string {
-        $text = $typename . ' "' . $name . '" is an activity in this course';
+        // Keep the existence fact and the gradedness fact as two short,
+        // standalone declarative sentences rather than one clause with a
+        // trailing parenthetical. Models are more likely to use every fact
+        // reliably when each is its own simple sentence.
+        $sentences = [$typename . ' "' . $name . '" exists in this course.'];
 
         try {
+            // grade_item is a legacy (non-autoloaded) class; it must be required
+            // explicitly, otherwise lookups can fail intermittently depending on
+            // what else has already been loaded in the request.
+            global $CFG;
+            require_once($CFG->libdir . '/gradelib.php');
             $gradeitem = \grade_item::fetch([
                 'itemtype' => 'mod',
                 'itemmodule' => $cm->modname,
@@ -194,16 +203,17 @@ class live_course_agent {
             if ($gradetype === GRADE_TYPE_VALUE || $gradetype === GRADE_TYPE_SCALE) {
                 if ($gradetype === GRADE_TYPE_VALUE && (float)$gradeitem->grademax > 0) {
                     $max = rtrim(rtrim(number_format((float)$gradeitem->grademax, 2), '0'), '.');
-                    $text .= ' (a graded activity, maximum grade ' . $max . ')';
+                    $sentences[] = 'This ' . strtolower($typename) . ' IS GRADED, with a maximum grade of '
+                        . $max . '.';
                 } else {
-                    $text .= ' (a graded activity)';
+                    $sentences[] = 'This ' . strtolower($typename) . ' IS GRADED.';
                 }
             } else {
-                $text .= ' (not graded)';
+                $sentences[] = 'This ' . strtolower($typename) . ' is NOT graded.';
             }
         }
 
-        return $text . '.';
+        return implode(' ', $sentences);
     }
 
     /**

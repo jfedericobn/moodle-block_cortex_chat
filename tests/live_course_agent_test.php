@@ -119,7 +119,7 @@ final class live_course_agent_test extends \advanced_testcase {
 
         // The activity is reported as existing even without any dates.
         $this->assertStringContainsString('Summative Quiz', $blob);
-        $this->assertStringContainsString('is an activity in this course', $blob);
+        $this->assertStringContainsString('exists in this course', $blob);
     }
 
     /**
