@@ -23,8 +23,9 @@ use block_cortex_chat\local\rate_limiter;
  *
  * @package    block_cortex_chat
  * @covers     \block_cortex_chat\local\rate_limiter
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 final class rate_limiter_test extends \advanced_testcase {
 

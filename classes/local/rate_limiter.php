@@ -20,8 +20,9 @@ namespace block_cortex_chat\local;
  * Sliding-window per-user rate limiter backed by a MUC application cache.
  *
  * @package    block_cortex_chat
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 class rate_limiter {
     /**

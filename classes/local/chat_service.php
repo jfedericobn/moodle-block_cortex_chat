@@ -40,8 +40,9 @@ use local_cortex\local\course_state;
  * never written to the Cortex corpus.
  *
  * @package    block_cortex_chat
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 class chat_service {
     /** @var string An AI-formatted answer grounded in course material. */

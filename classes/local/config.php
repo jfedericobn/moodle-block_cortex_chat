@@ -25,8 +25,9 @@ use local_cortex\local\config as ingest_config;
  * base URL and the chat guardrails are owned by this block.
  *
  * @package    block_cortex_chat
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 class config {
     /** @var int Default maximum user question length (characters). */

@@ -23,8 +23,9 @@ use block_cortex_chat\local\live_course_agent;
  *
  * @package    block_cortex_chat
  * @covers     \block_cortex_chat\local\live_course_agent
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 final class live_course_agent_test extends \advanced_testcase {
 

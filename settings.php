@@ -18,8 +18,9 @@
  * Admin settings for block_cortex_chat.
  *
  * @package    block_cortex_chat
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 
 defined('MOODLE_INTERNAL') || die();

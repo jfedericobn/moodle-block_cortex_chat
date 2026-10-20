@@ -25,8 +25,9 @@ use block_cortex_chat\local\chat_service;
  * to the browser.
  *
  * @package    block_cortex_chat
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 class block_cortex_chat extends block_base {
 

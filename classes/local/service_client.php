@@ -23,8 +23,9 @@ namespace block_cortex_chat\local;
  * reference code never reach the browser.
  *
  * @package    block_cortex_chat
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 class service_client {
     /** @var int Connect timeout (seconds). */

@@ -21,8 +21,9 @@ namespace block_cortex_chat\external;
  *
  * @package    block_cortex_chat
  * @covers     \block_cortex_chat\external\send_message
- * @copyright  2026 Cortex integration
+ * @copyright  2026 onwards, Blindside Networks Inc
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @author     Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 final class send_message_test extends \advanced_testcase {
 
