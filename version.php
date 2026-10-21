@@ -26,10 +26,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_cortex_chat';
-$plugin->version   = 2026092502;
+$plugin->version   = 2026102100;
 $plugin->requires  = 2024100700; // Moodle 4.5+.
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.2.0';
+$plugin->release   = '0.2.1';
 $plugin->dependencies = [
     'local_cortex' => 2026071300,
 ];

@@ -36,6 +36,14 @@ if ($ADMIN->fulltree) {
         PARAM_URL
     ));
 
+    // Cortex API key (scope service:read) sent on every Service Plane request.
+    $settings->add(new admin_setting_configpasswordunmask(
+        'block_cortex_chat/apikey',
+        get_string('settings_apikey', 'block_cortex_chat'),
+        get_string('settings_apikey_desc', 'block_cortex_chat'),
+        ''
+    ));
+
     // Maximum length of a single user question (characters).
     $settings->add(new admin_setting_configtext(
         'block_cortex_chat/maxquestionlength',

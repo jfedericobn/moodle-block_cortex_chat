@@ -58,6 +58,15 @@ class config {
     }
 
     /**
+     * Cortex API key for the Service Plane (scope service:read).
+     *
+     * @return string
+     */
+    public static function api_key(): string {
+        return trim((string)get_config('block_cortex_chat', 'apikey'));
+    }
+
+    /**
      * Cortex tenant id, reused from local_cortex.
      *
      * @return string
@@ -163,6 +172,6 @@ class config {
      * @return bool
      */
     public static function is_configured(): bool {
-        return self::service_url() !== '' && self::tenant_id() !== '';
+        return self::service_url() !== '' && self::tenant_id() !== '' && self::api_key() !== '';
     }
 }

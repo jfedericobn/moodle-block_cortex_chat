@@ -70,7 +70,11 @@ class service_client {
             'query' => $query,
         ];
         $curl = $this->new_curl(self::RETRIEVE_TIMEOUT);
-        $curl->setHeader(['Content-Type: application/json', 'Accept: application/json']);
+        $curl->setHeader([
+            'Content-Type: application/json',
+            'Accept: application/json',
+            'Authorization: Bearer ' . config::api_key(),
+        ]);
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
         $raw = $curl->post($url, $json);
         return $this->wrap_response($curl, $raw);

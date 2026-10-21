@@ -78,6 +78,8 @@ $string['diag_detail'] = 'Detail';
 $string['diag_grounding'] = 'Last grounding state';
 
 // Admin settings.
+$string['settings_apikey'] = 'Cortex API key';
+$string['settings_apikey_desc'] = 'API key issued by a Cortex administrator for this site\'s tenant, with the service:read scope (cortex keys create --tenant TENANT --name block_cortex_chat --scope service:read). Sent as a bearer token; Cortex 0.2 rejects Service Plane requests without it.';
 $string['settings_serviceurl'] = 'Cortex Service Plane URL';
 $string['settings_serviceurl_desc'] = 'Base URL of the Cortex Service Plane reachable from this Moodle server, e.g. https://cortex.example:8001/ (no trailing /api/v1). Used for POST /api/v1/service/retrieve. This is deployed separately from the ingest plane and must be kept private to server-side requests.';
 $string['settings_maxquestionlength'] = 'Maximum question length';
